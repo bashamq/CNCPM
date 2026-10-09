@@ -2,5 +2,33 @@
 <div id="msg" class="msg"></div><div class="card"><div class="search"><input id="asset" placeholder="Enter Asset Number e.g. CNC-001"><button class="btn" onclick="find()">Load Machine</button></div><div id="machine" class="card hidden"></div></div>
 <div id="formbox" class="card section hidden"><form id="f" class="form"><input type="hidden" name="assetNumber" id="a"><div class="field"><label>PM ID</label><input name="pmId"></div><div class="field"><label>Technician</label><input name="technician"></div><div class="field"><label>Maintenance Date</label><input name="maintenanceDate" type="date"></div><div class="field"><label>Work Status</label><select name="status"><option>In Progress</option><option>Completed</option><option>Machine Hold</option></select></div><div class="field"><label>Start Time</label><input name="startTime" type="time"></div><div class="field"><label>End Time</label><input name="endTime" type="time"></div><div class="field full"><label>Work Performed</label><textarea name="workPerformed"></textarea></div><div class="field full"><label>Problems Found</label><textarea name="problemsFound"></textarea></div><div class="field full"><label>Corrective Action</label><textarea name="correctiveAction"></textarea></div><div class="field full"><label>Remarks</label><textarea name="remarks"></textarea></div></form><div class="actions"><button class="btn success" onclick="save()">Save Maintenance</button></div></div>
 </main><script src="api.js"></script><script>
-let machineData=null;async function find(){let a=document.getElementById("asset").value.trim();if(!a)return;try{let r=await apiGet("machine",{assetNumber:a});machineData=r.machine||r.data||r;if(!machineData||(!machineData.assetNumber&&!machineData.Asset_Number))throw Error("Asset Number not found");document.getElementById("a").value=a;document.getElementById("machine").classList.remove("hidden");document.getElementById("machine").innerHTML=`<b>${esc(machineData.machineName||machineData.Machine_Name)}</b><br>Asset: ${esc(machineData.assetNumber||machineData.Asset_Number)} | Type: ${esc(machineData.machineType||machineData.Machine_Type)} | Manufacturer: ${esc(machineData.manufacturer||machineData.Manufacturer)} | Shop: ${esc(machineData.machineShop||machineData.Machine_Shop)}`;document.getElementById("formbox").classList.remove("hidden")}catch(e){msg(e.message,false)}}async function save(){let d=Object.fromEntries(new FormData(document.getElementById("f")).entries());try{let r=await apiPost("maintenanceUpdate",d);if(r.success===false)throw Error(r.message||"Save failed");msg("Maintenance saved")}catch(e){msg(e.message,false)}}
+let machineData=null;
+async function find(){
+  const a=document.getElementById("asset").value.trim();
+  if(!a){msg("Please enter Asset Number",false);return;}
+  try{
+    const r=await apiGet("machine",{assetNumber:a});
+    if(r && r.success===false) throw new Error(r.message||"Asset Number not found");
+    machineData=r.machine||r.data||r;
+    const asset=machineData.Asset_No ?? machineData.assetNumber ?? machineData.Asset_Number ?? "";
+    if(!asset) throw new Error("Asset Number not found. Please check the Asset_No in Machines sheet.");
+    document.getElementById("a").value=asset;
+    document.getElementById("machine").classList.remove("hidden");
+    document.getElementById("machine").innerHTML=
+      `<b>${esc(machineData.Machine_Name??machineData.machineName??"")}</b><br>`+
+      `Asset: ${esc(asset)} | Type: ${esc(machineData.Machine_Type??machineData.machineType??"")} | `+
+      `Manufacturer: ${esc(machineData.Manufacturer??machineData.manufacturer??"")} | `+
+      `Shop: ${esc(machineData.Machine_Shop??machineData.machineShop??"")}`;
+    document.getElementById("formbox").classList.remove("hidden");
+    msg("Machine loaded successfully",true);
+  }catch(e){msg(e.message||"Asset Number not found",false)}
+}
+async function save(){
+  const d=Object.fromEntries(new FormData(document.getElementById("f")).entries());
+  try{
+    const r=await apiPost("maintenanceUpdate",d);
+    if(r.success===false) throw new Error(r.message||"Save failed");
+    msg("Maintenance saved successfully",true);
+  }catch(e){msg(e.message||"Save failed",false)}
+}
 </script></body></html>
